@@ -9,6 +9,7 @@ from torchvision.utils import save_image
 
 
 EDGE_DIM = 28
+PADDING_ADD = 2
 
 parser = argparse.ArgumentParser(description='VAE MNIST Example')
 parser.add_argument('--batch-size', type=int, default=128, metavar='N',
@@ -71,7 +72,7 @@ class VAE(nn.Module):
         return torch.sigmoid(x)
 
     def forward(self, x):
-        x = F.pad(x, (2, 2, 2, 2))
+        x = F.pad(x, (PADDING_ADD, PADDING_ADD, PADDING_ADD, PADDING_ADD))
         mu, logvar = self.encode(x)
         z = self.reparameterize(mu, logvar)
         return self.decode(z), mu, logvar
@@ -84,8 +85,8 @@ optimizer = optim.Adam(model.parameters(), lr=1e-3)
 # Reconstruction + KL divergence losses summed over all elements and batch
 def loss_function(recon_x, x, mu, logvar):
     print('before', recon_x.shape)
-    print('after', recon_x[:, :, 2:-2, 2:-2].shape)
-    BCE = F.binary_cross_entropy(recon_x[:, :, 2:-2, 2:-2], x, reduction='sum')
+    print('after', recon_x[:, :, PADDING_ADD:-PADDING_ADD, PADDING_ADD:-PADDING_ADD].shape)
+    BCE = F.binary_cross_entropy(recon_x[:, :, PADDING_ADD:-PADDING_ADD, PADDING_ADD:-PADDING_ADD], x, reduction='sum')
 
     # see Appendix B from VAE paper:
     # Kingma and Welling. Auto-Encoding Variational Bayes. ICLR, 2014
