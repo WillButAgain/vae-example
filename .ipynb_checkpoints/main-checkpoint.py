@@ -42,7 +42,7 @@ test_loader = torch.utils.data.DataLoader(
 class VAE(nn.Module):
     def __init__(self):
         super(VAE, self).__init__()
-        self.EDGE_DIM = EDGE_DIM+4
+        self.EDGE_DIM = EDGE_DIM + 2*PADDING_ADD
         self.conv1 = nn.Conv2d(in_channels=1, out_channels=16, kernel_size=3, padding=(3-1)//2)
         self.conv2 = nn.Conv2d(in_channels=16, out_channels=3, kernel_size=3, padding=(3-1)//2)
         
@@ -72,10 +72,11 @@ class VAE(nn.Module):
         return torch.sigmoid(x)
 
     def forward(self, x):
+        # this would be deleted once the larger images are passed, with data around the edges
         x = F.pad(x, (PADDING_ADD, PADDING_ADD, PADDING_ADD, PADDING_ADD))
         mu, logvar = self.encode(x)
         z = self.reparameterize(mu, logvar)
-        return self.decode(z), mu, logvar
+        return self.decode(z)[:, :, PADDING_ADD:-PADDING_ADD, PADDING_ADD:-PADDING_ADD], mu, logvar
 
 
 model = VAE().to(device)
@@ -84,9 +85,7 @@ optimizer = optim.Adam(model.parameters(), lr=1e-3)
 
 # Reconstruction + KL divergence losses summed over all elements and batch
 def loss_function(recon_x, x, mu, logvar):
-    print('before', recon_x.shape)
-    print('after', recon_x[:, :, PADDING_ADD:-PADDING_ADD, PADDING_ADD:-PADDING_ADD].shape)
-    BCE = F.binary_cross_entropy(recon_x[:, :, PADDING_ADD:-PADDING_ADD, PADDING_ADD:-PADDING_ADD], x, reduction='sum')
+    BCE = F.binary_cross_entropy(recon_x, x, reduction='sum')
 
     # see Appendix B from VAE paper:
     # Kingma and Welling. Auto-Encoding Variational Bayes. ICLR, 2014
